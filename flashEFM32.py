@@ -32,19 +32,24 @@ def main():
     if family == 71:
         print "Part number: EFM32G%dF%d (rev %c, production ID %dd)" % (part_info & 0xFF, 
                 flash_size, rev, part_info >> 24 & 0xFF)
+        family_s = "G"
     elif family == 72:
         print "Part number: EFM32GG%dF%d (rev %c, production ID %dd)" % (part_info & 0xFF, 
                 flash_size, rev, part_info >> 24 & 0xFF)
+        family_s = "GG"
         raise Exception("TODO read page size")
     elif family == 73:
+        family_s = "TG"
         print "Part number: EFM32TG%dF%d (rev %c, production ID %dd)" % (part_info & 0xFF, 
                 flash_size, rev, part_info >> 24 & 0xFF)
         raise Exception("TODO read page size")
     elif family == 74:
+        family_s = "LG"
         print "Part number: EFM32LG%dF%d (rev %c, production ID %dd)" % (part_info & 0xFF, 
                 flash_size, rev, part_info >> 24 & 0xFF)
         raise Exception("TODO read page size")
     elif family == 76:
+        family_s = "ZG"
         print "Part number: EFM32ZG%dF%d (rev %c, production ID %dd)" % (part_info & 0xFF, 
                 flash_size, rev, part_info >> 24 & 0xFF)
         page_size = 1024
@@ -53,6 +58,8 @@ def main():
         sys.exit()
     print "Loading '%s'..." % sys.argv[1],
     vals = loadFile(sys.argv[1])
+    with open(sys.argv[1], "rb") as f:
+      data = f.read()
     size = len(vals) * 4
     print "%d bytes." % size
     if size / 1024.0 > flash_size:
@@ -65,7 +72,8 @@ def main():
     efm32.flashErase(flash_size, page_size)
     start_time = time.time()
     print "Programming Flash...",
-    efm32.flashProgram(vals)
+    #efm32.flashProgram(vals)
+    efm32.flashProgramWithFlashLoader(data, family_s)
     time_passed = time.time() - start_time
     print "Programmed %d bytes in %.2f seconds (%.2f kB/sec)." % (size,
             time_passed, (size / 1024.0) / time_passed)

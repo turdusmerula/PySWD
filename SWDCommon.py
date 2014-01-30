@@ -77,10 +77,66 @@ class DebugPort:
         self.swd.writeSWD(True, adrReg, data, ignore)
 
 class MEM_AP:
+
+    AP_CSW = 0
+    AP_TAR = 1<<2 # 0x04
+    AP_DRW = 3<<2 # 0x0C
+
+    DHCSR = 0xE000EDF0
+    DCRSR = 0xE000EDF4
+    DCRDR = 0xE000EDF8
+    DEMCR = 0xE000EDFC
+
+    CoreDebug_DHCSR_S_REGRDY_Pos = 16
+    CoreDebug_DHCSR_S_REGRDY_Msk = 1 << CoreDebug_DHCSR_S_REGRDY_Pos
+
+    DHCSR_S_RESET_ST_Pos = 25
+    DHCSR_S_RESET_ST_Msk = (1 << DHCSR_S_RESET_ST_Pos)
+
+    DHCSR_S_HALT_Pos = 17
+    DHCSR_S_HALT_Msk = 1 << DHCSR_S_HALT_Pos
+
+    AP_CSW_32BIT_TRANSFER = 0x02
+    AP_CSW_AUTO_INCREMENT = 0x10
+    AP_CSW_MASTERTYPE_DEBUG = (1 << 29)
+    AP_CSW_HPROT = (1 << 25)
+    AP_CSW_DEFAULT = (AP_CSW_32BIT_TRANSFER | AP_CSW_MASTERTYPE_DEBUG | AP_CSW_HPROT)
+
+    RUN_CMD = 0xA05F0001
+    STOP_CMD = 0xA05F0003
+    STEP_CMD = 0xA05F0005
+
+    SCB_AIRCR = 0xE000ED0C
+    SCB_AIRCR_VECTKEY_Pos = 16
+    SCB_AIRCR_VECTRESET_Pos = 0
+    SCB_AIRCR_VECTCLRACTIVE_Pos = 1
+    SCB_AIRCR_VECTCLRACTIVE_Msk = (1 << SCB_AIRCR_VECTCLRACTIVE_Pos)
+    SCB_AIRCR_VECTRESET_Msk = (1 << SCB_AIRCR_VECTRESET_Pos)
+
+
+
     def __init__ (self, dp, apsel):
         self.dp = dp
         self.apsel = apsel
         self.csw(1,2) # 32-bit auto-incrementing addressing
+
+    def waitForRegReady(self):
+      while (True):
+        dhcsr = self.readWord(self.DHCSR)
+        if dhcsr & self.CoreDebug_DHCSR_S_REGRDY_Msk:
+          return
+
+    def writeCpuReg(self, reg, value):
+      # Wait until debug register is ready to accept new data
+      self.waitForRegReady()
+      # Write value to Data Register
+      self.writeWord(self.DCRDR, value)
+      # Write register number ot Selector Register. 
+      # This will update the CPU register
+      self.writeWord(self.DCRSR, 0x10000 | reg)
+
+    def runTarget(self):
+      self.writeWord(self.DHCSR, self.RUN_CMD)
 
     def csw (self, addrInc, size):
         """ Set control/status word register """
@@ -101,6 +157,9 @@ class MEM_AP:
         self.dp.writeAP(self.apsel, 0x04, adr)
         self.dp.writeAP(self.apsel, 0x0C, data)
         return self.dp.readRB()
+
+    def writeAP(self, adr, data):
+        self.dp.writeAP(self.apsel, adr, data)
 
     def readBlock (self, adr, count):
         self.dp.writeAP(self.apsel, 0x04, adr)
