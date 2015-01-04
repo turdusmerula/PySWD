@@ -17,7 +17,16 @@ def loadFile(path):
     return arr.tolist()
 
 def main():
-    busPirate = PirateSWD("/dev/ttyUSB0", vreg = True)
+    if len(sys.argv)<=1:
+        print "Usage: "+sys.argv[0]+" <firmware> [<device>]"
+        sys.exit(1)
+
+    if len(sys.argv)<2:
+        ttyname = "/dev/ttyUSB0"
+    else:
+        ttyname = sys.argv[2] 
+    print "Flash "+sys.argv[1]+" on "+sys.argv[2]
+    busPirate = PirateSWD(ttyname, vreg = True)
     debugPort = DebugPort(busPirate)
     efm32     = EFM32(debugPort)
 
